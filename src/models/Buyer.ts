@@ -1,3 +1,5 @@
+import { BuyerIsBannedException } from '../exceptions/buyers/BuyerIsBannedException'
+
 export class Buyer {
     constructor(
         private _id: string,
@@ -11,6 +13,12 @@ export class Buyer {
         private _createdAt: Date,
         private _updatedAt: Date,
     ) {}
+
+    assertIsUnbanned() {
+        if (this._isBanned) {
+            throw new BuyerIsBannedException(this.id)
+        }
+    }
 
     public get isBanned(): boolean {
         return this._isBanned

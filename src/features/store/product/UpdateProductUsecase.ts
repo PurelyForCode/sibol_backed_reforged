@@ -1,11 +1,9 @@
 import { Usecase } from '../../../core/interfaces/Usecase'
-import { InternalServerError } from '../../../errors/InternalServerError'
 import { ProductNameIsNotUniqueInStoreException } from '../../../exceptions/products/ProductNameIsNotUniqueInStoreException'
-import { SellerHasNoStoreException } from '../../../exceptions/sellers/SellerHasNoStoreException'
-import { SellerNotFoundException } from '../../../exceptions/sellers/SellerNotFoundException'
 import { TransactionManager } from '../../../core/interfaces/TransactionManager'
 import { ProductNotFoundException } from '../../../exceptions/products/ProductNotFoundException'
 import { ProductImageNotFoundException } from '../../../exceptions/products/ProductImageNotFoundException'
+import { SellerStoreVerifier } from '../../../services/SellerStoreVerifier'
 
 export type UpdateProductCmd = {
     sellerId: string
@@ -28,24 +26,13 @@ export class UpdateProductUsecase implements Usecase<UpdateProductCmd, any> {
             const storeRepo = uow.getStoreRepo()
             const productImageRepo = uow.getProductImageRepo()
 
-            const seller = await sellerRepo.findById(cmd.sellerId)
-            if (!seller) {
-                throw new SellerNotFoundException(cmd.sellerId)
-            }
-            if (!seller.storeId) {
-                throw new SellerHasNoStoreException(cmd.sellerId)
-            }
-
-            // store validation
-            const store = await storeRepo.findById(seller.storeId)
-            if (!store) {
-                throw new InternalServerError(
-                    'Seller has a store but was not found in the database',
-                )
-            }
-            store.assertIsUnbanned()
-
+            const sellerStoreVerifier = new SellerStoreVerifier(
+                sellerRepo,
+                storeRepo,
+            )
+            const { store } = await sellerStoreVerifier.verify(cmd.sellerId)
             const product = await productRepo.findById(cmd.productId)
+
             if (!product) {
                 throw new ProductNotFoundException(cmd.productId)
             }

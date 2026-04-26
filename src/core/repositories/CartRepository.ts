@@ -1,4 +1,6 @@
 import { Repository } from '../interfaces/Repository'
 import { Cart } from '../../models/Cart'
 
-export interface CartRepository extends Repository<Cart, string> {}
+export interface CartRepository extends Repository<Cart, string> {
+    findCartByBuyerId(buyerId: string): Promise<Cart | null>
+}

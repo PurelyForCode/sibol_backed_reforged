@@ -5,6 +5,7 @@ import { SellerHasNoStoreException } from '../../../exceptions/sellers/SellerHas
 import { SellerNotFoundException } from '../../../exceptions/sellers/SellerNotFoundException'
 import { TransactionManager } from '../../../core/interfaces/TransactionManager'
 import { FileManager } from '../../../core/interfaces/FileManager'
+import { SellerStoreVerifier } from '../../../services/SellerStoreVerifier'
 
 export type RemoveProductCmd = {
     sellerId: string
@@ -24,22 +25,14 @@ export class RemoveProductUsecase implements Usecase<RemoveProductCmd, any> {
             const storeRepo = uow.getStoreRepo()
             const sellerRepo = uow.getSellerRepo()
 
-            const seller = await sellerRepo.findById(cmd.sellerId)
-            if (!seller) {
-                throw new SellerNotFoundException(cmd.sellerId)
-            }
-            if (!seller.storeId) {
-                throw new SellerHasNoStoreException(cmd.sellerId)
-            }
-            // store validation
-            const store = await storeRepo.findById(seller.storeId)
-            if (!store) {
-                throw new InternalServerError(
-                    'Seller has a store but was not found in the database',
-                )
-            }
-            store.assertIsUnbanned()
+            const sellerStoreResolver = new SellerStoreVerifier(
+                sellerRepo,
+                storeRepo,
+            )
+
+            await sellerStoreResolver.verify(cmd.sellerId)
             const product = await productRepo.findById(cmd.productId)
+
             if (!product) {
                 throw new ProductNotFoundException(cmd.productId)
             }

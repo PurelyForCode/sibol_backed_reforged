@@ -1,6 +1,10 @@
 import { Repository } from '../interfaces/Repository'
 import { Store } from '../../models/Store'
+import { StoreSeller } from '../../models/StoreSeller'
 
 export interface StoreRepository extends Repository<Store, string> {
-    findOwnerById(ownerId: string): Promise<Store | null>
+    findOwner(storeId: string): Promise<Store | null>
+    findStoreSellerById(sellerId: string): Promise<StoreSeller | null>
+    doesSellerBelongInAStore(sellerId: string): Promise<boolean>
+    findStoreByProductId(productId: string): Promise<Store | null>
 }

@@ -1,8 +1,5 @@
 import { Usecase } from '../../../core/interfaces/Usecase'
-import { InternalServerError } from '../../../errors/InternalServerError'
 import { ProductNameIsNotUniqueInStoreException } from '../../../exceptions/products/ProductNameIsNotUniqueInStoreException'
-import { SellerHasNoStoreException } from '../../../exceptions/sellers/SellerHasNoStoreException'
-import { SellerNotFoundException } from '../../../exceptions/sellers/SellerNotFoundException'
 import { BaseUnitOfMeasurement } from '../../../models/product/BaseUnit'
 import { Product } from '../../../models/product/Product'
 import { ProductStatus } from '../../../models/product/ProductStatus'
@@ -12,6 +9,11 @@ import { IdGenerator } from '../../../core/interfaces/IdGenerator'
 import { TransactionManager } from '../../../core/interfaces/TransactionManager'
 import { ImageKeyGenerator } from '../../../core/interfaces/ImageKeyGenerator'
 import { ProductCanNotBeCreatedWithoutThumbnailException } from '../../../exceptions/products/ProductCanNotBeCreatedWithoutThumbnailException'
+import { SellerStoreVerifier } from '../../../services/SellerStoreVerifier'
+import { UnitPrice } from '../../../models/UnitPrice'
+import { MultipleDefaultSellUnitException } from '../../../exceptions/sellUnits/MultipleDefaultSellUnitException'
+import { ProductCanNotBeCreatedWithNoSellUnitException } from '../../../exceptions/products/ProductCanNotBeCreatedWithNoSellUnitException'
+import { DuplicateSellUnitDisplayNameException } from '../../../exceptions/sellUnits/DuplicateSellUnitDisplayNameException'
 
 export type AddProductCmd = {
     sellerId: string
@@ -21,9 +23,13 @@ export type AddProductCmd = {
     images: { path: string; isThumbnail: boolean }[]
     sellUnits: {
         displayName: string
-        price: number
+        isFractional: boolean
         conversionFactor: number
         isDefault: boolean
+        pricing: {
+            basePrice: number
+            packagingCost: number
+        }
     }[]
 }
 
@@ -41,28 +47,24 @@ export class AddProductUsecase implements Usecase<AddProductCmd, any> {
             const sellerRepo = uow.getSellerRepo()
             const sellUnitRepo = uow.getSellUnitRepo()
             const productImageRepo = uow.getProductImageRepo()
+            const unitPriceRepo = uow.getUnitPriceRepo()
 
             if (!cmd.images.length) {
                 throw new ProductCanNotBeCreatedWithoutThumbnailException()
             }
-
-            const seller = await sellerRepo.findById(cmd.baseUnit)
-            if (!seller) {
-                throw new SellerNotFoundException(cmd.sellerId)
+            if (!cmd.sellUnits.length) {
+                throw new ProductCanNotBeCreatedWithNoSellUnitException()
+            }
+            if (cmd.sellUnits.filter(u => u.isDefault).length !== 1) {
+                throw new MultipleDefaultSellUnitException()
             }
 
-            if (!seller.storeId) {
-                throw new SellerHasNoStoreException(cmd.sellerId)
-            }
+            const sellerStoreResolver = new SellerStoreVerifier(
+                sellerRepo,
+                storeRepo,
+            )
 
-            // store validation
-            const store = await storeRepo.findById(seller.storeId)
-            if (!store) {
-                throw new InternalServerError(
-                    'Seller has a store but was not found in the database',
-                )
-            }
-            store.assertIsUnbanned()
+            const { store } = await sellerStoreResolver.verify(cmd.sellerId)
 
             if (
                 !(await productRepo.isProductNameUniqueInStore(
@@ -92,7 +94,7 @@ export class AddProductUsecase implements Usecase<AddProductCmd, any> {
                 null,
                 0,
                 0,
-                ProductStatus.incomplete(),
+                ProductStatus.active(),
                 now,
                 now,
                 null,
@@ -117,26 +119,49 @@ export class AddProductUsecase implements Usecase<AddProductCmd, any> {
             }
 
             const sellUnits: SellUnit[] = []
+            const unitPrices: UnitPrice[] = []
 
             for (const unit of cmd.sellUnits) {
-                sellUnits.push(
-                    new SellUnit(
-                        this.idGen.generate(),
-                        product.id,
-                        unit.conversionFactor,
-                        unit.price,
-                        unit.displayName,
-                        null,
-                        unit.isDefault,
-                    ),
+                const sellUnit = new SellUnit(
+                    this.idGen.generate(),
+                    product.id,
+                    unit.conversionFactor,
+                    unit.displayName,
+                    unit.isFractional,
+                    null,
+                    unit.isDefault,
                 )
+                const unitPrice = new UnitPrice(
+                    this.idGen.generate(),
+                    sellUnit.id,
+                    unit.pricing.basePrice,
+                    unit.pricing.packagingCost,
+                    now,
+                    null,
+                )
+
+                sellUnits.push(sellUnit)
+                unitPrices.push(unitPrice)
+            }
+
+            const scanned = new Set()
+            for (const sellUnit of sellUnits) {
+                if (scanned.has(sellUnit.displayName)) {
+                    throw new DuplicateSellUnitDisplayNameException(
+                        sellUnit.displayName,
+                    )
+                }
+                scanned.add(sellUnit.displayName)
             }
 
             await productRepo.insert(product)
+
             await Promise.all([
                 ...sellUnits.map(u => sellUnitRepo.insert(u)),
                 ...images.map(i => productImageRepo.insert(i)),
             ])
+
+            await Promise.all([...unitPrices.map(u => unitPriceRepo.insert(u))])
 
             return {
                 id: product.id,

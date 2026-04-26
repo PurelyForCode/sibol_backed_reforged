@@ -2,23 +2,23 @@ import { Usecase } from '../../../core/interfaces/Usecase'
 import { InternalServerError } from '../../../errors/InternalServerError'
 import { SellerHasNoStoreException } from '../../../exceptions/sellers/SellerHasNoStoreException'
 import { SellerNotFoundException } from '../../../exceptions/sellers/SellerNotFoundException'
-import { IdGenerator } from '../../../core/interfaces/IdGenerator'
 import { TransactionManager } from '../../../core/interfaces/TransactionManager'
-import { Category } from '../../../models/Category'
 import { CategoryNameDuplicateException } from '../../../exceptions/categories/CategoryNameDuplicateException'
+import { CategoryNotFoundException } from '../../../exceptions/categories/CategoryNotFoundException'
 
-export type AddCategoryCmd = {
+export type AddProductToCategoryCmd = {
     sellerId: string
-    name: string
+    categoryId: string
+    productId: string
 }
 
-export class AddCategoryUsecase implements Usecase<AddCategoryCmd, any> {
-    constructor(
-        private readonly tm: TransactionManager,
-        private readonly idGen: IdGenerator,
-    ) {}
+export class AddProductToCategoryUsecase implements Usecase<
+    AddProductToCategoryCmd,
+    any
+> {
+    constructor(private readonly tm: TransactionManager) {}
 
-    async execute(cmd: AddCategoryCmd): Promise<any> {
+    async execute(cmd: AddProductToCategoryCmd): Promise<any> {
         return this.tm.transaction(async uow => {
             const categoryRepo = uow.getCategoryRepo()
             const storeRepo = uow.getStoreRepo()
@@ -41,20 +41,11 @@ export class AddCategoryUsecase implements Usecase<AddCategoryCmd, any> {
             }
             store.assertIsUnbanned()
 
-            if (
-                !(await categoryRepo.isCategoryNameUniqueInStore(
-                    store.id,
-                    cmd.name,
-                ))
-            ) {
-                throw new CategoryNameDuplicateException(cmd.name)
+            const category = await categoryRepo.findById(cmd.categoryId)
+            if (!category) {
+                throw new CategoryNotFoundException(cmd.categoryId)
             }
-
-            const id = this.idGen.generate()
-            const category = new Category(id, store.id, cmd.name)
-            await categoryRepo.insert(category)
-
-            return { categoryId: category.id }
+            await categoryRepo.delete(category.id)
         })
     }
 }

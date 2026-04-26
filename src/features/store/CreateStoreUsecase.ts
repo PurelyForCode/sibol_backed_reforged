@@ -1,6 +1,6 @@
 import { Usecase } from '../../core/interfaces/Usecase'
 import { SellerNotFoundException } from '../../exceptions/sellers/SellerNotFoundException'
-import { SellerCanNotHaveTwoStoresException } from '../../exceptions/store/SellerCanNotHaveTwoStoresException'
+import { SellerAlreadyBelongsToAStoreException } from '../../exceptions/store/SellerCanNotHaveTwoStoresException'
 import { Address } from '../../models/Address'
 import { Store } from '../../models/Store'
 import { IdGenerator } from '../../core/interfaces/IdGenerator'
@@ -44,11 +44,12 @@ export class CreateStoreUsecase implements Usecase<
             if (!seller) {
                 throw new SellerNotFoundException(cmd.sellerId)
             }
-            seller.assertCanInteract()
+            seller.assertIsVerified()
 
-            const sellerHasStore = await storeRepo.findOwnerById(cmd.sellerId)
-            if (sellerHasStore) {
-                throw new SellerCanNotHaveTwoStoresException()
+            const sellerBelongsToAStore =
+                await storeRepo.doesSellerBelongInAStore(cmd.sellerId)
+            if (sellerBelongsToAStore) {
+                throw new SellerAlreadyBelongsToAStoreException(cmd.sellerId)
             }
 
             const addressId = this.idGen.generate()

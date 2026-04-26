@@ -1,10 +1,10 @@
 import { DomainError } from '../DomainError'
 
-export class SellerCanNotHaveTwoStoresException extends DomainError {
-    constructor() {
+export class SellerAlreadyBelongsToAStoreException extends DomainError {
+    constructor(sellerId: string) {
         super(
-            'SELLER_CAN_NOT_HAVE_TWO_STORES',
-            'Seller can not have two stores',
+            'SELLER_ALREADY_BELONGS_TO_A_STORE',
+            `Seller (${sellerId}) already belongs to a store`,
         )
     }
 }

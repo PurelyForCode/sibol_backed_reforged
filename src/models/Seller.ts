@@ -4,20 +4,15 @@ import { SellerIsUnverified } from '../exceptions/sellers/SellerIsUnverifiedExce
 export class Seller {
     constructor(
         private _id: string,
-        private _storeId: string | null,
         private _firstName: string,
         private _middleInitial: string,
         private _lastName: string,
         private _isVerified: boolean,
-        private _isBanned: boolean,
         private _createdAt: Date,
         private _updatedAt: Date,
     ) {}
 
-    assertCanInteract() {
-        if (this.isBanned) {
-            throw new SellerIsBannedException(this.id)
-        }
+    assertIsVerified() {
         if (!this.isVerified) {
             throw new SellerIsUnverified(this.id)
         }
@@ -28,12 +23,6 @@ export class Seller {
     }
     public set id(value: string) {
         this._id = value
-    }
-    public get storeId(): string | null {
-        return this._storeId
-    }
-    public set storeId(value: string | null) {
-        this._storeId = value
     }
     public get firstName(): string {
         return this._firstName
@@ -58,12 +47,6 @@ export class Seller {
     }
     public set isVerified(value: boolean) {
         this._isVerified = value
-    }
-    public get isBanned(): boolean {
-        return this._isBanned
-    }
-    public set isBanned(value: boolean) {
-        this._isBanned = value
     }
     public get createdAt(): Date {
         return this._createdAt

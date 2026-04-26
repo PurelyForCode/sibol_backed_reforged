@@ -4,12 +4,8 @@ export class ProductStatus {
     static banned() {
         return new ProductStatus('banned')
     }
-
     static active() {
         return new ProductStatus('active')
-    }
-    static incomplete() {
-        return new ProductStatus('incomplete')
     }
 
     getValue(): string {

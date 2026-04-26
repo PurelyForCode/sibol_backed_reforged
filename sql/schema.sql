@@ -77,16 +77,32 @@ CREATE TABLE admins (
 	last_name VARCHAR(100) NOT NULL
 );
 
-
 CREATE TABLE sellers (
 		id UUID PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE ON UPDATE CASCADE,
-		store_id UUID REFERENCES stores(id) ON DELETE SET NULL 
 		first_name VARCHAR(100) NOT NULL,
 		middle_initial VARCHAR(10) NOT NULL,
-
 		last_name VARCHAR(100) NOT NULL,
 		is_verified BOOLEAN NOT NULL DEFAULT FALSE,
-		is_banned BOOLEAN NOT NULL DEFAULT FALSE,
+		created_at TIMESTAMPTZ NOT NULL,
+		updated_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE stores(
+		id UUID PRIMARY KEY,
+		address_id UUID NOT NULL REFERENCES addresses(id),
+		name VARCHAR(100) NOT NULL,
+		description TEXT,
+		support_email VARCHAR(255),
+		support_phone VARCHAR(32),
+		total_sales INTEGER NOT NULL DEFAULT 0,
+		banned_at TIMESTAMPTZ
+);
+
+CREATE TABLE store_seller (
+		id UUID PRIMARY KEY,
+		is_owner BOOLEAN NOT NULL,
+		store_id UUID NOT NULL REFERENCES stores(id) ON DELETE CASCADE ON UPDATE CASCADE,
+		seller_id UUID NOT NULL REFERENCES sellers(id) ON DELETE CASCADE ON UPDATE CASCADE,
 		created_at TIMESTAMPTZ NOT NULL,
 		updated_at TIMESTAMPTZ NOT NULL
 );
@@ -104,16 +120,6 @@ CREATE TABLE buyers (
 	updated_at TIMESTAMPTZ NOT NULL
 );
 
-CREATE TABLE stores(
-		id UUID PRIMARY KEY,
-		address_id UUID NOT NULL REFERENCES addresses(id),
-		name VARCHAR(100) NOT NULL,
-		description TEXT,
-		support_email VARCHAR(255),
-		support_phone VARCHAR(32),
-		total_sales INTEGER NOT NULL DEFAULT 0,
-		banned_at TIMESTAMPTZ
-);
 
 CREATE TABLE delivery_schedules (
 		id UUID PRIMARY KEY,
@@ -150,12 +156,23 @@ CREATE TABLE products (
 CREATE TABLE sell_units (
 	id UUID PRIMARY KEY,
 	product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE ON UPDATE CASCADE,
-	conversion_factor INTEGER NOT NULL CHECK(conversion_factor > 0),
-	price_per_unit INTEGER NOT NULL CHECK(price_per_unit > 0),
+	conversion_factor NUMERIC(12, 4) NOT NULL CHECK (conversion_factor > 0),
 	display_name VARCHAR(20) NOT NULL,
+	is_fractional BOOLEAN NOT NULL DEFAULT false,
 	discontinued_at TIMESTAMPTZ,
 	is_default BOOLEAN NOT NULL,
+
 	UNIQUE (product_id, display_name)
+);
+
+CREATE TABLE unit_prices (
+	id UUID PRIMARY KEY,
+	sell_unit_id UUID NOT NULL REFERENCES sell_units(id) ON DELETE CASCADE,
+	base_price NUMERIC(12, 2) NOT NULL CHECK (base_price >= 0),
+	packaging_cost NUMERIC(12, 2) NOT NULL DEFAULT 0 CHECK (packaging_cost >= 0), 
+	effective_from TIMESTAMPTZ NOT NULL DEFAULT now(),
+	effective_to TIMESTAMPTZ,
+	CONSTRAINT no_overlap CHECK (effective_to IS NULL OR effective_to > effective_from)
 );
 
 CREATE TABLE product_delivery_schedules (
