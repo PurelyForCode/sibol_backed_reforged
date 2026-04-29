@@ -19,13 +19,16 @@ export type CreateSellUnitCmd = {
     sellerId: string
 }
 
-export class CreateSellUnitUsecase implements Usecase<CreateSellUnitCmd, any> {
+export class CreateSellUnitUsecase implements Usecase<
+    CreateSellUnitCmd,
+    { sellUnitId: string }
+> {
     constructor(
         private readonly tm: TransactionManager,
         private readonly idGen: IdGenerator,
     ) {}
 
-    async execute(cmd: CreateSellUnitCmd): Promise<any> {
+    async execute(cmd: CreateSellUnitCmd): Promise<{ sellUnitId: string }> {
         return this.tm.transaction(async uow => {
             const productRepo = uow.getProductRepo()
             const sellerRepo = uow.getSellerRepo()
@@ -75,6 +78,7 @@ export class CreateSellUnitUsecase implements Usecase<CreateSellUnitCmd, any> {
             )
             await sellUnitRepo.insert(sellUnit)
             await unitPriceRepo.insert(unitPrice)
+            return { sellUnitId: sellUnit.id }
         })
     }
 }

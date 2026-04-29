@@ -4,6 +4,7 @@ import { BuyerRepository } from '../repositories/BuyerRepository'
 import { CartItemRepository } from '../repositories/CartItemRepository'
 import { CartRepository } from '../repositories/CartRepository'
 import { CategoryRepository } from '../repositories/CategoryRepository'
+import { OrderRepository } from '../repositories/OrderRepository'
 import { ProductImageRepository } from '../repositories/ProductImageRepository'
 import { ProductRepository } from '../repositories/ProductRepository'
 import { SellerRepository } from '../repositories/SellerRepository'
@@ -24,4 +25,5 @@ export interface UnitOfWork {
     getSellUnitRepo(): SellUnitRepository
     getUnitPriceRepo(): UnitPriceRepository
     getProductImageRepo(): ProductImageRepository
+    getOrderRepo(): OrderRepository
 }

@@ -7,4 +7,5 @@ export interface StoreRepository extends Repository<Store, string> {
     findStoreSellerById(sellerId: string): Promise<StoreSeller | null>
     doesSellerBelongInAStore(sellerId: string): Promise<boolean>
     findStoreByProductId(productId: string): Promise<Store | null>
+    findAllStoresByProductIds(ids: string[]): Promise<Store[]>
 }

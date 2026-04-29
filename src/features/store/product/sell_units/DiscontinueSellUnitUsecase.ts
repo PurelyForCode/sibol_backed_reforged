@@ -11,11 +11,11 @@ export type DiscontinueSellUnitCmd = {
 
 export class DiscontinueSellUnitUsecase implements Usecase<
     DiscontinueSellUnitCmd,
-    any
+    void
 > {
     constructor(private readonly tm: TransactionManager) {}
 
-    async execute(cmd: DiscontinueSellUnitCmd): Promise<any> {
+    async execute(cmd: DiscontinueSellUnitCmd): Promise<void> {
         return this.tm.transaction(async uow => {
             const sellerRepo = uow.getSellerRepo()
             const storeRepo = uow.getStoreRepo()

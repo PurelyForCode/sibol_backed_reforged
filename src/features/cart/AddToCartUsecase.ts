@@ -14,16 +14,13 @@ export type AddToCartCmd = {
     sellUnitId: string
 }
 
-export class AddToCartUsecase implements Usecase<
-    AddToCartCmd,
-    { storeId: string }
-> {
+export class AddToCartUsecase implements Usecase<AddToCartCmd, void> {
     constructor(
         private tm: TransactionManager,
         private idGen: IdGenerator,
     ) {}
 
-    async execute(cmd: AddToCartCmd): Promise<{ storeId: string }> {
+    async execute(cmd: AddToCartCmd): Promise<void> {
         return await this.tm.transaction(async uow => {
             const productRepo = uow.getProductRepo()
             const sellUnitRepo = uow.getSellUnitRepo()

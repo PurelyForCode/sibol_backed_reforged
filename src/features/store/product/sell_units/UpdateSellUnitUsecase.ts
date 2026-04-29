@@ -14,13 +14,13 @@ export type UpdateSellUnitCmd = {
     sellerId: string
 }
 
-export class UpdateSellUnitUsecase implements Usecase<UpdateSellUnitCmd, any> {
+export class UpdateSellUnitUsecase implements Usecase<UpdateSellUnitCmd, void> {
     constructor(
         private readonly tm: TransactionManager,
         private readonly idGen: IdGenerator,
     ) {}
 
-    async execute(cmd: UpdateSellUnitCmd): Promise<any> {
+    async execute(cmd: UpdateSellUnitCmd): Promise<void> {
         return this.tm.transaction(async uow => {
             const unitPriceRepo = uow.getUnitPriceRepo()
             const sellUnitRepo = uow.getUnitPriceRepo()
